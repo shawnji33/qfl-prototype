@@ -1,295 +1,172 @@
 import { useState } from 'react'
 
-function Toggle({ on, onChange }) {
-  return (
-    <button
-      onClick={() => onChange(!on)}
-      style={{
-        width: 40,
-        height: 22,
-        borderRadius: 'var(--radius-full)',
-        background: on ? 'var(--blue)' : 'var(--border-strong)',
-        position: 'relative',
-        transition: 'background 0.2s',
-        border: 'none',
-        cursor: 'pointer',
-        flexShrink: 0,
-        padding: 0,
-      }}
-      aria-pressed={on}
-    >
-      <div style={{
-        position: 'absolute',
-        top: 3,
-        left: on ? 21 : 3,
-        width: 16,
-        height: 16,
-        borderRadius: '50%',
-        background: '#fff',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.18)',
-        transition: 'left 0.18s cubic-bezier(.4,0,.2,1)',
-      }} />
-    </button>
-  )
-}
+const css = `
+  .acct { padding: 32px 36px; max-width: 720px; }
+  .acct-title { font-size: 22px; font-weight: 700; color: var(--gray-900); letter-spacing: -0.5px; margin-bottom: 28px; }
 
-function Card({ children, style }) {
-  return (
-    <div style={{
-      background: 'var(--surface)',
-      border: '1px solid var(--border)',
-      borderRadius: 'var(--radius-md)',
-      boxShadow: 'var(--shadow-sm)',
-      ...style,
-    }}>
-      {children}
-    </div>
-  )
-}
+  .sc { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); margin-bottom: 16px; overflow: hidden; }
+  .sc-header { padding: 16px 20px; border-bottom: 1px solid var(--border); }
+  .sc-label { font-size: 11px; font-weight: 700; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.6px; }
 
-function CardHeader({ title, action }) {
-  return (
-    <div style={{
-      padding: '16px 20px',
-      borderBottom: '1px solid var(--border)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    }}>
-      <h2 style={{ fontSize: 15, fontWeight: 600, color: 'var(--navy)', letterSpacing: '-0.4px' }}>{title}</h2>
-      {action}
-    </div>
-  )
-}
+  /* Profile */
+  .profile-row { display: flex; align-items: center; gap: 16px; padding: 20px; }
+  .avatar-lg { width: 52px; height: 52px; background: var(--black); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; color: #72D46C; flex-shrink: 0; letter-spacing: -0.5px; }
+  .profile-name { font-size: 16px; font-weight: 700; color: var(--gray-900); letter-spacing: -0.4px; }
+  .profile-email { font-size: 13px; color: var(--gray-500); margin-top: 2px; }
+  .profile-badge { display: inline-flex; align-items: center; gap: 5px; margin-top: 6px; background: #EBF9EA; color: #45B83F; padding: 3px 9px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+  .edit-btn { margin-left: auto; padding: 8px 16px; background: var(--gray-100); border: 1px solid var(--border); border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--gray-700); cursor: pointer; transition: background 0.12s; flex-shrink: 0; }
+  .edit-btn:hover { background: var(--gray-200); }
 
-function SettingRow({ label, sub, right, noBorder }) {
+  /* Info rows */
+  .info-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid var(--border); }
+  .info-row:last-child { border-bottom: none; }
+  .info-key { font-size: 13.5px; color: var(--gray-500); }
+  .info-val { font-size: 13.5px; font-weight: 500; color: var(--gray-900); letter-spacing: -0.2px; }
+
+  /* Linked accounts */
+  .bank-row { display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--border); }
+  .bank-row:last-child { border-bottom: none; }
+  .bank-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; flex-shrink: 0; border: 1px solid var(--border); }
+  .bank-body { flex: 1; }
+  .bank-name { font-size: 13.5px; font-weight: 600; color: var(--gray-900); }
+  .bank-acct { font-size: 12px; color: var(--gray-500); margin-top: 2px; }
+  .bank-status { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; }
+  .bank-status.ok { color: #45B83F; }
+  .bank-right { text-align: right; flex-shrink: 0; }
+  .bank-balance { font-size: 14px; font-weight: 700; color: var(--gray-900); letter-spacing: -0.3px; }
+
+  /* Toggles */
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid var(--border); }
+  .toggle-row:last-child { border-bottom: none; }
+  .toggle-label { font-size: 13.5px; font-weight: 500; color: var(--gray-900); }
+  .toggle-sub { font-size: 12px; color: var(--gray-500); margin-top: 2px; }
+  .toggle { position: relative; width: 38px; height: 22px; flex-shrink: 0; }
+  .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .toggle-track { position: absolute; inset: 0; background: var(--gray-200); border-radius: 11px; cursor: pointer; transition: background 0.15s; }
+  .toggle input:checked + .toggle-track { background: #72D46C; }
+  .toggle-thumb { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; background: #fff; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.2); transition: transform 0.15s; }
+  .toggle input:checked ~ .toggle-thumb { transform: translateX(16px); }
+
+  /* Danger zone */
+  .danger-btn { display: block; width: 100%; padding: 11px 20px; text-align: left; font-size: 13.5px; font-weight: 500; color: var(--neg); background: none; border: none; cursor: pointer; transition: background 0.12s; }
+  .danger-btn:hover { background: #FFF5F5; }
+
+  @media (max-width: 600px) {
+    .acct { padding: 24px 20px; }
+  }
+`
+
+function Toggle({ defaultOn = false }) {
+  const [on, setOn] = useState(defaultOn)
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '13px 20px',
-      borderBottom: noBorder ? 'none' : '1px solid var(--border)',
-      gap: 12,
-    }}>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>{label}</div>
-        {sub && <div style={{ fontSize: 12, color: 'var(--text-tertiary)', letterSpacing: '-0.2px', marginTop: 1 }}>{sub}</div>}
-      </div>
-      {right}
-    </div>
+    <label className="toggle">
+      <input type="checkbox" checked={on} onChange={() => setOn(!on)}/>
+      <div className="toggle-track"/>
+      <div className="toggle-thumb"/>
+    </label>
   )
 }
 
 export default function Account() {
-  // Investment preferences
-  const [autoInvest, setAutoInvest] = useState(true)
-  const [reinvestDiv, setReinvestDiv] = useState(true)
-  const [taxLoss, setTaxLoss] = useState(true)
-
-  // Notifications
-  const [emailNotif, setEmailNotif] = useState(true)
-  const [monthlyReports, setMonthlyReports] = useState(true)
-  const [tradeConf, setTradeConf] = useState(true)
-
-  const editBtn = (
-    <button style={{
-      fontSize: 13,
-      fontWeight: 500,
-      color: 'var(--blue)',
-      letterSpacing: '-0.3px',
-      padding: '5px 12px',
-      border: '1px solid rgba(27,111,232,0.25)',
-      borderRadius: 'var(--radius-full)',
-      background: 'transparent',
-      cursor: 'pointer',
-      transition: 'background 0.12s',
-    }}
-    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--blue-light)'}
-    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-    >
-      Edit profile
-    </button>
-  )
-
   return (
-    <div style={{ padding: '32px 36px', maxWidth: 720, margin: '0 auto' }}>
-      <h1 style={{ fontSize: 24, fontWeight: 700, color: 'var(--navy)', letterSpacing: '-0.6px', marginBottom: 24 }}>
-        Account
-      </h1>
+    <>
+      <style>{css}</style>
+      <div className="acct">
+        <div className="acct-title">Account</div>
 
-      {/* Profile */}
-      <Card style={{ marginBottom: 16 }}>
-        <CardHeader title="Profile" action={editBtn} />
-        <div style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div style={{
-            width: 52,
-            height: 52,
-            borderRadius: '50%',
-            background: 'var(--navy)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 16,
-            fontWeight: 600,
-            color: '#fff',
-            letterSpacing: '0.3px',
-            flexShrink: 0,
-          }}>
-            SJ
-          </div>
-          <div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--navy)', letterSpacing: '-0.4px', marginBottom: 3 }}>
-              Shawn Ji
-            </div>
-            <div style={{ fontSize: 13.5, color: 'var(--text-secondary)', letterSpacing: '-0.3px' }}>
-              shawn@qfl.com
-            </div>
-            <div style={{ fontSize: 12.5, color: 'var(--text-tertiary)', letterSpacing: '-0.2px', marginTop: 2 }}>
-              Member since January 2023
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Linked accounts */}
-      <Card style={{ marginBottom: 16 }}>
-        <CardHeader title="Linked Accounts" action={
-          <button style={{
-            fontSize: 13,
-            fontWeight: 500,
-            color: 'var(--blue)',
-            letterSpacing: '-0.3px',
-            padding: '5px 12px',
-            border: '1px solid rgba(27,111,232,0.25)',
-            borderRadius: 'var(--radius-full)',
-            background: 'transparent',
-            cursor: 'pointer',
-          }}>
-            + Link account
-          </button>
-        } />
-        {[
-          { name: 'Chase Checking', last4: '4821', balance: '$12,440.00', color: '#1B6FE8', initial: 'C' },
-          { name: 'Wells Fargo Savings', last4: '3892', balance: '$28,200.00', color: '#CC0000', initial: 'W' },
-        ].map((acct, i, arr) => (
-          <div
-            key={acct.name}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 14,
-              padding: '14px 20px',
-              borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none',
-            }}
-          >
-            <div style={{
-              width: 38,
-              height: 38,
-              borderRadius: 10,
-              background: acct.color,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 15,
-              fontWeight: 700,
-              color: '#fff',
-              flexShrink: 0,
-            }}>
-              {acct.initial}
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>
-                {acct.name} <span style={{ color: 'var(--text-tertiary)', fontWeight: 400 }}>····{acct.last4}</span>
-              </div>
-              <div style={{ fontSize: 13, color: 'var(--text-secondary)', letterSpacing: '-0.3px', marginTop: 2 }}>
-                {acct.balance}
+        {/* Profile */}
+        <div className="sc">
+          <div className="sc-header"><div className="sc-label">Profile</div></div>
+          <div className="profile-row">
+            <div className="avatar-lg">SJ</div>
+            <div>
+              <div className="profile-name">Shawn Ji</div>
+              <div className="profile-email">shawn@quantitativefinance.io</div>
+              <div className="profile-badge">
+                <svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor"><circle cx="5" cy="5" r="5"/></svg>
+                Active investor
               </div>
             </div>
-            <span style={{
-              fontSize: 11.5,
-              fontWeight: 600,
-              color: 'var(--green)',
-              background: 'var(--green-light)',
-              padding: '3px 9px',
-              borderRadius: 'var(--radius-full)',
-              letterSpacing: '-0.2px',
-            }}>
-              Connected
-            </span>
+            <button className="edit-btn">Edit profile</button>
           </div>
-        ))}
-      </Card>
-
-      {/* Investment preferences */}
-      <Card style={{ marginBottom: 16 }}>
-        <CardHeader title="Investment Preferences" />
-        <SettingRow
-          label="Auto-invest"
-          sub="$500 deposited monthly from Chase ····4821"
-          right={<Toggle on={autoInvest} onChange={setAutoInvest} />}
-        />
-        <SettingRow
-          label="Reinvest dividends"
-          sub="Automatically reinvest all dividend income"
-          right={<Toggle on={reinvestDiv} onChange={setReinvestDiv} />}
-        />
-        <SettingRow
-          label="Tax-loss harvesting"
-          sub="Automatically harvest losses to offset gains"
-          right={<Toggle on={taxLoss} onChange={setTaxLoss} />}
-          noBorder
-        />
-      </Card>
-
-      {/* Notifications */}
-      <Card style={{ marginBottom: 16 }}>
-        <CardHeader title="Notifications" />
-        <SettingRow
-          label="Email notifications"
-          sub="Portfolio alerts and important updates"
-          right={<Toggle on={emailNotif} onChange={setEmailNotif} />}
-        />
-        <SettingRow
-          label="Monthly reports"
-          sub="Summary of portfolio performance each month"
-          right={<Toggle on={monthlyReports} onChange={setMonthlyReports} />}
-        />
-        <SettingRow
-          label="Trade confirmations"
-          sub="Email when trades are executed"
-          right={<Toggle on={tradeConf} onChange={setTradeConf} />}
-          noBorder
-        />
-      </Card>
-
-      {/* Danger zone */}
-      <Card>
-        <CardHeader title="Danger Zone" />
-        <div style={{ padding: '16px 20px' }}>
-          <button
-            style={{
-              fontSize: 14,
-              fontWeight: 500,
-              color: 'var(--red)',
-              letterSpacing: '-0.3px',
-              background: 'transparent',
-              border: '1px solid rgba(200,55,45,0.25)',
-              borderRadius: 'var(--radius-sm)',
-              padding: '9px 16px',
-              cursor: 'pointer',
-              transition: 'background 0.12s',
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--red-light)'}
-            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-          >
-            Close account
-          </button>
-          <p style={{ fontSize: 12.5, color: 'var(--text-tertiary)', letterSpacing: '-0.2px', marginTop: 8, lineHeight: 1.5 }}>
-            This will permanently close your QFL account and liquidate all positions. This action cannot be undone.
-          </p>
+          <div className="info-row"><span className="info-key">Member since</span><span className="info-val">January 2023</span></div>
+          <div className="info-row"><span className="info-key">Account type</span><span className="info-val">Individual brokerage</span></div>
+          <div className="info-row"><span className="info-key">Risk profile</span><span className="info-val">Moderate-aggressive</span></div>
+          <div className="info-row"><span className="info-key">Investment goal</span><span className="info-val">Long-term growth</span></div>
         </div>
-      </Card>
-    </div>
+
+        {/* Linked accounts */}
+        <div className="sc">
+          <div className="sc-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div className="sc-label">Linked accounts</div>
+            <button style={{ fontSize: 13, fontWeight: 600, color: '#72D46C', background: 'none', border: 'none', cursor: 'pointer' }}>+ Connect</button>
+          </div>
+          {[
+            { name: 'Bank of America',  acct: 'Checking ••4291', balance: '$6,420.00',  icon: '🏦', color: '#E8F0FE' },
+            { name: 'Alpaca Securities', acct: 'Brokerage ••8812', balance: '$127,432.14', icon: '📈', color: '#EBF9EA' },
+          ].map(b => (
+            <div className="bank-row" key={b.name}>
+              <div className="bank-icon" style={{ background: b.color }}>{b.icon}</div>
+              <div className="bank-body">
+                <div className="bank-name">{b.name}</div>
+                <div className="bank-acct">{b.acct}</div>
+              </div>
+              <div className="bank-right">
+                <div className="bank-balance">{b.balance}</div>
+                <div className="bank-status ok" style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end', marginTop: 3, fontSize: 12 }}>
+                  <svg width="7" height="7" viewBox="0 0 10 10" fill="#45B83F"><circle cx="5" cy="5" r="5"/></svg>
+                  Connected
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Preferences */}
+        <div className="sc">
+          <div className="sc-header"><div className="sc-label">Preferences</div></div>
+          {[
+            { label: 'Auto-rebalance',        sub: 'Automatically rebalance when drift exceeds 5%', on: true  },
+            { label: 'Dividend reinvestment',  sub: 'Reinvest dividends automatically (DRIP)',      on: true  },
+            { label: 'Tax-loss harvesting',    sub: 'Offset gains with strategic loss realization',  on: false },
+            { label: 'Auto-invest',            sub: '$500/month on the 1st of each month',           on: true  },
+          ].map(p => (
+            <div className="toggle-row" key={p.label}>
+              <div>
+                <div className="toggle-label">{p.label}</div>
+                <div className="toggle-sub">{p.sub}</div>
+              </div>
+              <Toggle defaultOn={p.on}/>
+            </div>
+          ))}
+        </div>
+
+        {/* Notifications */}
+        <div className="sc">
+          <div className="sc-header"><div className="sc-label">Notifications</div></div>
+          {[
+            { label: 'Rebalance alerts',   sub: 'When your portfolio is rebalanced',       on: true  },
+            { label: 'Dividend alerts',    sub: 'When dividends are received or reinvested', on: true  },
+            { label: 'Market summaries',   sub: 'Weekly email performance recap',            on: false },
+            { label: 'Strategy updates',   sub: 'When strategy holdings change',             on: true  },
+          ].map(p => (
+            <div className="toggle-row" key={p.label}>
+              <div>
+                <div className="toggle-label">{p.label}</div>
+                <div className="toggle-sub">{p.sub}</div>
+              </div>
+              <Toggle defaultOn={p.on}/>
+            </div>
+          ))}
+        </div>
+
+        {/* Danger zone */}
+        <div className="sc">
+          <div className="sc-header"><div className="sc-label">Account actions</div></div>
+          <button className="danger-btn">Download account data</button>
+          <button className="danger-btn">Close account</button>
+        </div>
+      </div>
+    </>
   )
 }

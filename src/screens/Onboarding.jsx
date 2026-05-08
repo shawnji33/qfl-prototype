@@ -1,599 +1,455 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-const styles = `
-  .ob-root {
-    min-height: 100vh;
-    background: linear-gradient(160deg, #f0f4fb 0%, #e8edf7 100%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 32px 16px 48px;
-  }
-  .ob-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-md);
-    width: 100%;
-    max-width: 480px;
-    padding: 40px 40px 36px;
-  }
-  @media (max-width: 540px) {
-    .ob-card { padding: 28px 20px 28px; }
-  }
-  .ob-progress-wrap {
-    width: 100%;
-    max-width: 480px;
-    margin-bottom: 24px;
-  }
-  .ob-progress-bar {
-    height: 3px;
-    background: var(--border);
-    border-radius: var(--radius-full);
-    overflow: hidden;
-  }
-  .ob-progress-fill {
-    height: 100%;
-    background: var(--blue);
-    border-radius: var(--radius-full);
-    transition: width 0.35s cubic-bezier(.4,0,.2,1);
-  }
-  .ob-step-label {
-    font-size: 12px;
-    color: var(--text-tertiary);
-    letter-spacing: -0.2px;
-    margin-bottom: 8px;
-  }
+const STEPS = [
+  { id: 'welcome',    label: 'Welcome'     },
+  { id: 'profile',    label: 'Profile'     },
+  { id: 'goal',       label: 'Goal'        },
+  { id: 'horizon',    label: 'Horizon'     },
+  { id: 'risk',       label: 'Risk'        },
+  { id: 'result',     label: 'Portfolio'   },
+]
 
-  /* Welcome */
-  .ob-welcome-logo {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 32px;
-  }
-  .ob-welcome-icon {
-    width: 64px;
-    height: 64px;
-    background: var(--navy);
-    border-radius: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 8px 24px rgba(11,30,61,0.18);
-  }
-  .ob-welcome-icon span {
-    color: #fff;
-    font-weight: 800;
-    font-size: 22px;
-    letter-spacing: -0.5px;
-  }
-  .ob-headline {
-    font-size: 26px;
-    font-weight: 700;
-    color: var(--navy);
-    letter-spacing: -0.5px;
-    line-height: 1.22;
-    text-align: center;
-    margin-bottom: 14px;
-  }
-  .ob-sub {
-    font-size: 14.5px;
-    color: var(--text-secondary);
-    letter-spacing: -0.3px;
-    line-height: 1.6;
-    text-align: center;
-    margin-bottom: 32px;
-  }
-  .ob-btn-primary {
-    background: var(--navy);
-    color: #fff;
-    border-radius: var(--radius-full);
-    padding: 14px 28px;
-    font-size: 15px;
-    font-weight: 600;
-    width: 100%;
-    transition: background 0.15s;
-    border: none;
-    cursor: pointer;
-    letter-spacing: -0.3px;
-  }
-  .ob-btn-primary:hover { background: var(--navy-800); }
-  .ob-link-row {
-    text-align: center;
-    margin-top: 16px;
-    font-size: 13.5px;
-    color: var(--text-secondary);
-    letter-spacing: -0.3px;
-  }
-  .ob-link {
-    color: var(--blue);
-    cursor: pointer;
-    font-weight: 500;
-  }
-  .ob-link:hover { text-decoration: underline; }
+const GOALS = [
+  { id: 'growth',      icon: '📈', label: 'Long-term growth',   sub: 'Maximize wealth over 10+ years'      },
+  { id: 'income',      icon: '💰', label: 'Passive income',     sub: 'Generate steady dividend returns'     },
+  { id: 'retirement',  icon: '🏖️', label: 'Retirement',         sub: 'Build a secure retirement portfolio'  },
+  { id: 'saving',      icon: '🎯', label: 'Specific goal',      sub: 'Save for a home, education, or event' },
+]
 
-  /* Step headings */
-  .ob-step-title {
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--navy);
-    letter-spacing: -0.5px;
-    margin-bottom: 6px;
-  }
-  .ob-step-sub {
-    font-size: 14px;
-    color: var(--text-secondary);
-    letter-spacing: -0.3px;
-    margin-bottom: 24px;
-  }
-  .ob-back-btn {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    color: var(--text-secondary);
-    font-size: 13px;
-    font-weight: 500;
-    letter-spacing: -0.3px;
-    margin-bottom: 20px;
-    cursor: pointer;
-    width: fit-content;
-    transition: color 0.12s;
-  }
-  .ob-back-btn:hover { color: var(--text-primary); }
+const HORIZONS = [
+  { id: 'short',  label: 'Under 3 years',  sub: 'Near-term focus'      },
+  { id: 'mid',    label: '3–7 years',       sub: 'Medium-term growth'   },
+  { id: 'long',   label: '7–15 years',      sub: 'Long-term compounding' },
+  { id: 'vlong',  label: '15+ years',       sub: 'Generational wealth'  },
+]
 
-  /* Form fields */
-  .ob-field-group {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    margin-bottom: 28px;
-  }
-  .ob-field-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-  }
-  .ob-field {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-  }
-  .ob-label {
-    font-size: 12.5px;
-    font-weight: 500;
-    color: var(--text-secondary);
-    letter-spacing: -0.2px;
-  }
-  .ob-input {
-    border: 1.5px solid var(--border-strong);
-    border-radius: var(--radius-sm);
-    padding: 11px 13px;
-    font-size: 14.5px;
-    width: 100%;
-    outline: none;
-    transition: border-color 0.15s;
-    color: var(--text-primary);
-    background: var(--surface);
-    letter-spacing: -0.3px;
-  }
-  .ob-input:focus { border-color: var(--blue); }
+const RISK_OPTIONS = [
+  { id: 'conservative',  label: 'Conservative',        sub: 'Capital preservation, low volatility',  exp: '+4–7% / year'   },
+  { id: 'moderate',      label: 'Moderate',            sub: 'Balanced growth and stability',          exp: '+7–11% / year'  },
+  { id: 'aggressive',    label: 'Aggressive',          sub: 'Higher growth, higher volatility',        exp: '+11–18% / year' },
+  { id: 'very_agg',      label: 'Very aggressive',     sub: 'Maximum growth potential',                exp: '+15–25% / year' },
+]
 
-  /* Option cards */
-  .ob-options {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-bottom: 28px;
-  }
-  .ob-option {
-    border: 1.5px solid var(--border-strong);
-    border-radius: var(--radius-md);
-    padding: 14px 16px;
-    cursor: pointer;
-    transition: border-color 0.15s, background 0.15s;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    background: var(--surface);
-  }
-  .ob-option:hover {
-    border-color: rgba(27,111,232,0.3);
-    background: var(--blue-light);
-  }
-  .ob-option.selected {
-    border-color: var(--blue);
-    background: var(--blue-light);
-  }
-  .ob-option-dot {
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    border: 2px solid var(--border-strong);
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: border-color 0.15s;
-  }
-  .ob-option.selected .ob-option-dot {
-    border-color: var(--blue);
-    background: var(--blue);
-  }
-  .ob-option.selected .ob-option-dot::after {
-    content: '';
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #fff;
-  }
-  .ob-option-text {
-    font-size: 14.5px;
-    font-weight: 500;
-    color: var(--text-primary);
-    letter-spacing: -0.3px;
-  }
-  .ob-option.selected .ob-option-text {
-    color: var(--blue);
-  }
-
-  /* Recommendation */
-  .ob-reco-card {
-    background: linear-gradient(135deg, #f0f5ff 0%, #eef4fd 100%);
-    border: 1.5px solid rgba(27,111,232,0.15);
-    border-radius: var(--radius-lg);
-    padding: 24px;
-    margin-bottom: 24px;
-  }
-  .ob-reco-name {
-    font-size: 17px;
-    font-weight: 700;
-    color: var(--navy);
-    letter-spacing: -0.4px;
-    margin-bottom: 4px;
-  }
-  .ob-reco-meta {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 20px;
-  }
-  .ob-badge {
-    background: rgba(27,111,232,0.1);
-    color: var(--blue);
-    font-size: 11.5px;
-    font-weight: 600;
-    padding: 3px 9px;
-    border-radius: var(--radius-full);
-    letter-spacing: -0.2px;
-  }
-  .ob-reco-return {
-    font-size: 13px;
-    color: var(--text-secondary);
-    letter-spacing: -0.3px;
-  }
-  .ob-reco-return strong {
-    color: var(--green);
-    font-weight: 600;
-  }
-  .ob-donut-wrap {
-    display: flex;
-    gap: 24px;
-    align-items: center;
-  }
-  .ob-donut {
-    position: relative;
-    width: 100px;
-    height: 100px;
-    flex-shrink: 0;
-  }
-  .ob-donut svg {
-    transform: rotate(-90deg);
-  }
-  .ob-donut-center {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text-secondary);
-    letter-spacing: -0.2px;
-    flex-direction: column;
-    gap: 0;
-  }
-  .ob-legend {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  .ob-legend-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .ob-legend-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-  .ob-legend-label {
-    font-size: 12.5px;
-    color: var(--text-secondary);
-    letter-spacing: -0.2px;
-    flex: 1;
-  }
-  .ob-legend-pct {
-    font-size: 12.5px;
-    font-weight: 600;
-    color: var(--text-primary);
-    letter-spacing: -0.2px;
-  }
-  .ob-adjust-link {
-    text-align: center;
-    margin-top: 12px;
-    font-size: 13.5px;
-    color: var(--blue);
-    cursor: pointer;
-    letter-spacing: -0.3px;
-    font-weight: 500;
-  }
-  .ob-adjust-link:hover { text-decoration: underline; }
-`
-
-// Donut chart — pure SVG, no lib needed
-function DonutChart() {
-  const slices = [
-    { pct: 60, color: '#1B6FE8', label: 'US Equities' },
-    { pct: 20, color: '#0B1E3D', label: 'International' },
-    { pct: 15, color: '#0EA5C2', label: 'Bonds' },
-    { pct: 5, color: '#9DB0C8', label: 'Alternatives' },
-  ]
-  const cx = 50, cy = 50, r = 38, innerR = 24
-  const circumference = 2 * Math.PI * r
-  let offset = 0
-
-  const arcs = slices.map((s) => {
-    const len = (s.pct / 100) * circumference
-    const gap = 1.5
-    const arc = {
-      ...s,
-      dashArray: `${len - gap} ${circumference - len + gap}`,
-      dashOffset: -offset,
-    }
-    offset += len
-    return arc
-  })
-
+function QFLogo() {
   return (
-    <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
-      <div style={{ width: 100, height: 100, position: 'relative', flexShrink: 0 }}>
-        <svg width="100" height="100" viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)' }}>
-          {/* Background */}
-          <circle cx={cx} cy={cy} r={r} fill="none" stroke="#E8EDF5" strokeWidth="13" />
-          {arcs.map((arc, i) => (
-            <circle
-              key={i}
-              cx={cx} cy={cy} r={r}
-              fill="none"
-              stroke={arc.color}
-              strokeWidth="13"
-              strokeDasharray={arc.dashArray}
-              strokeDashoffset={arc.dashOffset}
-              strokeLinecap="butt"
-            />
-          ))}
-        </svg>
-        <div style={{
-          position: 'absolute', inset: 0,
-          display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center',
-        }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--navy)', letterSpacing: '-0.3px' }}>4</span>
-          <span style={{ fontSize: 9.5, color: 'var(--text-tertiary)', letterSpacing: '-0.2px' }}>assets</span>
-        </div>
-      </div>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {slices.map((s) => (
-          <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: s.color, flexShrink: 0 }} />
-            <span style={{ fontSize: 12.5, color: 'var(--text-secondary)', letterSpacing: '-0.2px', flex: 1 }}>{s.label}</span>
-            <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.2px' }}>{s.pct}%</span>
-          </div>
-        ))}
-      </div>
-    </div>
+    <svg width="44" height="44" viewBox="0 0 40 40" fill="none">
+      <circle cx="19" cy="19" r="16" fill="#72D46C"/>
+      <circle cx="18" cy="18" r="8" fill="#111"/>
+      <rect x="24" y="24" width="10" height="7" rx="3.5" transform="rotate(-42 24 24)" fill="#72D46C"/>
+    </svg>
   )
 }
 
-export default function Onboarding() {
-  const [step, setStep] = useState(0)
-  const [goal, setGoal] = useState('Grow my wealth')
-  const [horizon, setHorizon] = useState('10+ years')
-  const [risk, setRisk] = useState('😐 Hold and wait it out')
-  const navigate = useNavigate()
+function ArrowRight() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+    </svg>
+  )
+}
 
-  const totalSteps = 5
-  const progress = step === 0 ? 0 : (step / totalSteps) * 100
+function ArrowLeft() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+    </svg>
+  )
+}
+
+/* Donut chart for the portfolio result screen */
+function Donut({ slices }) {
+  const r = 60, cx = 70, cy = 70, stroke = 28
+  const circ = 2 * Math.PI * r
+  let offset = 0
+  const arcs = slices.map(s => {
+    const len = (s.pct / 100) * circ
+    const arc = { ...s, len, offset }
+    offset += len
+    return arc
+  })
+  return (
+    <svg width={140} height={140} viewBox="0 0 140 140">
+      {arcs.map((a, i) => (
+        <circle
+          key={i}
+          cx={cx} cy={cy} r={r}
+          fill="none"
+          stroke={a.color}
+          strokeWidth={stroke}
+          strokeDasharray={`${a.len} ${circ - a.len}`}
+          strokeDashoffset={-a.offset}
+          style={{ transform: 'rotate(-90deg)', transformOrigin: '70px 70px' }}
+        />
+      ))}
+      <text x={cx} y={cy - 6} textAnchor="middle" fill="#111" fontSize="13" fontWeight="700">+13.5%</text>
+      <text x={cx} y={cy + 10} textAnchor="middle" fill="#888" fontSize="10">YTD</text>
+    </svg>
+  )
+}
+
+const css = `
+  .onboard-wrap {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    padding: 40px 20px;
+  }
+
+  .onboard-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    width: 100%;
+    max-width: 520px;
+    overflow: hidden;
+  }
+
+  /* Progress bar */
+  .progress-bar-wrap {
+    height: 3px;
+    background: var(--gray-100);
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: #72D46C;
+    border-radius: 0 2px 2px 0;
+    transition: width 0.35s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  /* Step indicator */
+  .step-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 16px 24px 0;
+  }
+  .step-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--gray-200);
+    transition: background 0.2s, width 0.2s;
+  }
+  .step-dot.done { background: #45B83F; }
+  .step-dot.active { background: #72D46C; width: 18px; border-radius: 3px; }
+
+  /* Content */
+  .onboard-body { padding: 32px 36px 28px; }
+
+  .step-tag { font-size: 11px; font-weight: 700; color: #72D46C; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; }
+  .step-heading { font-size: 24px; font-weight: 800; color: var(--gray-900); letter-spacing: -0.8px; line-height: 1.2; margin-bottom: 8px; }
+  .step-sub { font-size: 14px; color: var(--gray-500); line-height: 1.55; margin-bottom: 28px; }
+
+  /* Options grid */
+  .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 28px; }
+  .option-card {
+    padding: 16px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: border-color 0.13s, background 0.13s;
+    text-align: left;
+  }
+  .option-card:hover { border-color: rgba(17,17,17,0.18); background: var(--gray-50); }
+  .option-card.selected { border-color: #72D46C; background: #EBF9EA; }
+  .option-icon { font-size: 22px; margin-bottom: 8px; }
+  .option-label { font-size: 14px; font-weight: 700; color: var(--gray-900); letter-spacing: -0.3px; }
+  .option-sub { font-size: 12px; color: var(--gray-500); margin-top: 3px; line-height: 1.4; }
+  .option-exp { font-size: 12px; font-weight: 600; color: #45B83F; margin-top: 6px; }
+
+  /* List options */
+  .options-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 28px; }
+  .option-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: border-color 0.13s, background 0.13s;
+  }
+  .option-row:hover { border-color: rgba(17,17,17,0.18); background: var(--gray-50); }
+  .option-row.selected { border-color: #72D46C; background: #EBF9EA; }
+  .opt-radio { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--gray-300); flex-shrink: 0; transition: border-color 0.13s; display: flex; align-items: center; justify-content: center; }
+  .option-row.selected .opt-radio { border-color: #72D46C; }
+  .opt-radio-dot { width: 8px; height: 8px; border-radius: 50%; background: #72D46C; opacity: 0; transition: opacity 0.13s; }
+  .option-row.selected .opt-radio-dot { opacity: 1; }
+
+  /* Input */
+  .field-label { font-size: 12px; font-weight: 600; color: var(--gray-700); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 6px; }
+  .field-input { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 15px; font-weight: 400; color: var(--gray-900); outline: none; transition: border-color 0.13s; margin-bottom: 14px; font-family: inherit; }
+  .field-input:focus { border-color: #72D46C; }
+
+  /* Footer nav */
+  .onboard-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 36px;
+    border-top: 1px solid var(--border);
+    background: var(--gray-50);
+  }
+  .btn-back { display: flex; align-items: center; gap: 7px; padding: 10px 18px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; color: var(--gray-700); background: none; border: 1px solid var(--border); cursor: pointer; transition: background 0.12s; }
+  .btn-back:hover { background: var(--gray-100); }
+  .btn-next { display: flex; align-items: center; gap: 7px; padding: 10px 22px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 700; color: #fff; background: var(--black); cursor: pointer; transition: background 0.12s; border: none; }
+  .btn-next:hover { background: #2a2a2a; }
+  .btn-next:disabled { background: var(--gray-200); color: var(--gray-500); cursor: not-allowed; }
+
+  /* Result screen */
+  .result-body { padding: 28px 36px 8px; }
+  .result-grid { display: grid; grid-template-columns: 140px 1fr; gap: 24px; align-items: center; margin-bottom: 28px; }
+  .result-chart-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .result-match { display: inline-flex; align-items: center; gap: 6px; background: #EBF9EA; color: #45B83F; padding: 5px 12px; border-radius: 20px; font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .result-heading { font-size: 20px; font-weight: 800; color: var(--gray-900); letter-spacing: -0.6px; margin-bottom: 6px; }
+  .result-sub { font-size: 13px; color: var(--gray-500); line-height: 1.5; }
+  .result-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+  .result-metric { background: var(--gray-100); border-radius: var(--radius-sm); padding: 12px 14px; }
+  .result-metric-label { font-size: 10.5px; font-weight: 700; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.4px; }
+  .result-metric-val { font-size: 17px; font-weight: 800; color: var(--gray-900); letter-spacing: -0.5px; margin-top: 4px; }
+  .result-metric-val.pos { color: var(--pos); }
+  .legend-list { display: flex; flex-direction: column; gap: 7px; }
+  .legend-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--gray-700); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .legend-pct { margin-left: auto; font-weight: 700; color: var(--gray-900); }
+
+  /* Welcome */
+  .welcome-body { padding: 48px 36px 36px; text-align: center; }
+  .welcome-logo { display: flex; justify-content: center; margin-bottom: 24px; }
+  .welcome-heading { font-size: 28px; font-weight: 800; color: var(--gray-900); letter-spacing: -1px; line-height: 1.2; margin-bottom: 12px; }
+  .welcome-sub { font-size: 15px; color: var(--gray-500); line-height: 1.6; margin-bottom: 36px; max-width: 380px; margin-left: auto; margin-right: auto; }
+  .welcome-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 36px; }
+  .welcome-stat { background: var(--gray-100); border-radius: var(--radius-md); padding: 16px 12px; }
+  .welcome-stat-val { font-size: 22px; font-weight: 800; color: var(--gray-900); letter-spacing: -0.8px; }
+  .welcome-stat-label { font-size: 11.5px; color: var(--gray-500); margin-top: 4px; line-height: 1.3; }
+  .btn-get-started { width: 100%; padding: 14px; background: var(--black); color: #fff; border-radius: var(--radius-sm); font-size: 15px; font-weight: 700; letter-spacing: -0.3px; display: flex; align-items: center; justify-content: center; gap: 8px; border: none; cursor: pointer; transition: background 0.12s; }
+  .btn-get-started:hover { background: #2a2a2a; }
+`
+
+const PORTFOLIO_SLICES = [
+  { pct: 50, color: '#72D46C', label: 'US Equities' },
+  { pct: 20, color: '#111111', label: 'International' },
+  { pct: 15, color: '#BBBBBB', label: 'Fixed income' },
+  { pct: 10, color: '#DDDDDD', label: 'Alternatives' },
+  { pct:  5, color: '#F0F0F0', label: 'Cash' },
+]
+
+export default function Onboarding() {
+  const navigate = useNavigate()
+  const [step, setStep] = useState(0)
+  const [goal, setGoal] = useState(null)
+  const [horizon, setHorizon] = useState(null)
+  const [risk, setRisk] = useState(null)
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [email, setEmail] = useState('')
+
+  const progress = (step / (STEPS.length - 1)) * 100
+
+  const canNext = () => {
+    if (step === 0) return true
+    if (step === 1) return firstName.trim() && email.trim()
+    if (step === 2) return goal !== null
+    if (step === 3) return horizon !== null
+    if (step === 4) return risk !== null
+    return true
+  }
+
+  function next() {
+    if (step < STEPS.length - 1) setStep(s => s + 1)
+    else navigate('/dashboard')
+  }
+  function back() {
+    if (step > 0) setStep(s => s - 1)
+  }
 
   return (
     <>
-      <style>{styles}</style>
-      <div className="ob-root">
-        {step > 0 && step < 5 && (
-          <div className="ob-progress-wrap">
-            <div className="ob-step-label">Step {step} of {totalSteps}</div>
-            <div className="ob-progress-bar">
-              <div className="ob-progress-fill" style={{ width: `${progress}%` }} />
-            </div>
+      <style>{css}</style>
+      <div className="onboard-wrap">
+        <div className="onboard-card">
+          {/* Progress */}
+          <div className="progress-bar-wrap">
+            <div className="progress-bar-fill" style={{ width: `${progress}%` }}/>
           </div>
-        )}
 
-        <div className="ob-card">
-          {/* Step 0: Welcome */}
+          {/* Step dots */}
+          <div className="step-indicator">
+            {STEPS.map((s, i) => (
+              <div key={s.id} className={`step-dot${i < step ? ' done' : i === step ? ' active' : ''}`}/>
+            ))}
+          </div>
+
+          {/* ── Step 0: Welcome ── */}
           {step === 0 && (
-            <>
-              <div className="ob-welcome-logo">
-                <div className="ob-welcome-icon">
-                  <span>QFL</span>
+            <div className="welcome-body">
+              <div className="welcome-logo"><QFLogo/></div>
+              <div className="welcome-heading">Modern markets require modern solutions</div>
+              <div className="welcome-sub">
+                Quantitative Finance builds personalized, data-driven portfolios using automated strategies — so your money works smarter, every day.
+              </div>
+              <div className="welcome-stats">
+                <div className="welcome-stat">
+                  <div className="welcome-stat-val">8</div>
+                  <div className="welcome-stat-label">Brokers supported</div>
+                </div>
+                <div className="welcome-stat">
+                  <div className="welcome-stat-val">50+</div>
+                  <div className="welcome-stat-label">Strategies available</div>
+                </div>
+                <div className="welcome-stat">
+                  <div className="welcome-stat-val">1B+</div>
+                  <div className="welcome-stat-label">Datapoints analyzed</div>
                 </div>
               </div>
-              <h1 className="ob-headline">Intelligent investing,<br />personalized for you</h1>
-              <p className="ob-sub">
-                QFL uses quantitative models and your financial goals to build and manage a portfolio optimized for long-term wealth.
-              </p>
-              <button className="ob-btn-primary" onClick={() => setStep(1)}>Get started</button>
-              <div className="ob-link-row">
-                Already have an account?{' '}
-                <span className="ob-link" onClick={() => navigate('/dashboard')}>Sign in</span>
-              </div>
-            </>
-          )}
-
-          {/* Step 1: Create account */}
-          {step === 1 && (
-            <>
-              <div className="ob-back-btn" onClick={() => setStep(0)}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="15 18 9 12 15 6"/>
-                </svg>
-                Back
-              </div>
-              <h2 className="ob-step-title">Create your account</h2>
-              <p className="ob-step-sub">Get started in under 2 minutes.</p>
-              <div className="ob-field-group">
-                <div className="ob-field-row">
-                  <div className="ob-field">
-                    <label className="ob-label">First name</label>
-                    <input className="ob-input" defaultValue="Shawn" />
-                  </div>
-                  <div className="ob-field">
-                    <label className="ob-label">Last name</label>
-                    <input className="ob-input" defaultValue="Ji" />
-                  </div>
-                </div>
-                <div className="ob-field">
-                  <label className="ob-label">Email address</label>
-                  <input className="ob-input" type="email" defaultValue="shawn@qfl.com" />
-                </div>
-                <div className="ob-field">
-                  <label className="ob-label">Password</label>
-                  <input className="ob-input" type="password" defaultValue="securepassword123" />
-                </div>
-              </div>
-              <button className="ob-btn-primary" onClick={() => setStep(2)}>Continue</button>
-            </>
-          )}
-
-          {/* Step 2: Investment goal */}
-          {step === 2 && (
-            <>
-              <div className="ob-back-btn" onClick={() => setStep(1)}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="15 18 9 12 15 6"/>
-                </svg>
-                Back
-              </div>
-              <h2 className="ob-step-title">What&apos;s your primary investment goal?</h2>
-              <p className="ob-step-sub">We&apos;ll use this to tailor your portfolio strategy.</p>
-              <div className="ob-options">
-                {['Grow my wealth', 'Save for retirement', 'Build an emergency fund', 'Generate income'].map((opt) => (
-                  <div
-                    key={opt}
-                    className={`ob-option${goal === opt ? ' selected' : ''}`}
-                    onClick={() => setGoal(opt)}
-                  >
-                    <div className="ob-option-dot" />
-                    <span className="ob-option-text">{opt}</span>
-                  </div>
-                ))}
-              </div>
-              <button className="ob-btn-primary" onClick={() => setStep(3)}>Continue</button>
-            </>
-          )}
-
-          {/* Step 3: Time horizon */}
-          {step === 3 && (
-            <>
-              <div className="ob-back-btn" onClick={() => setStep(2)}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="15 18 9 12 15 6"/>
-                </svg>
-                Back
-              </div>
-              <h2 className="ob-step-title">When do you plan to access this money?</h2>
-              <p className="ob-step-sub">Your time horizon affects your risk profile.</p>
-              <div className="ob-options">
-                {['Less than 2 years', '2–5 years', '5–10 years', '10+ years'].map((opt) => (
-                  <div
-                    key={opt}
-                    className={`ob-option${horizon === opt ? ' selected' : ''}`}
-                    onClick={() => setHorizon(opt)}
-                  >
-                    <div className="ob-option-dot" />
-                    <span className="ob-option-text">{opt}</span>
-                  </div>
-                ))}
-              </div>
-              <button className="ob-btn-primary" onClick={() => setStep(4)}>Continue</button>
-            </>
-          )}
-
-          {/* Step 4: Risk tolerance */}
-          {step === 4 && (
-            <>
-              <div className="ob-back-btn" onClick={() => setStep(3)}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="15 18 9 12 15 6"/>
-                </svg>
-                Back
-              </div>
-              <h2 className="ob-step-title">How would you react to a 20% portfolio drop?</h2>
-              <p className="ob-step-sub">Be honest — there are no wrong answers.</p>
-              <div className="ob-options">
-                {[
-                  '😰 Sell everything immediately',
-                  '😟 Sell some to reduce risk',
-                  '😐 Hold and wait it out',
-                  '😤 Buy more — it\'s a discount',
-                ].map((opt) => (
-                  <div
-                    key={opt}
-                    className={`ob-option${risk === opt ? ' selected' : ''}`}
-                    onClick={() => setRisk(opt)}
-                  >
-                    <div className="ob-option-dot" />
-                    <span className="ob-option-text">{opt}</span>
-                  </div>
-                ))}
-              </div>
-              <button className="ob-btn-primary" onClick={() => setStep(5)}>Continue</button>
-            </>
-          )}
-
-          {/* Step 5: Recommendation */}
-          {step === 5 && (
-            <>
-              <h2 className="ob-step-title" style={{ marginBottom: 4 }}>Your personalized portfolio</h2>
-              <p className="ob-step-sub">Based on your goals and risk profile.</p>
-
-              <div className="ob-reco-card">
-                <div className="ob-reco-name">Balanced Growth Portfolio</div>
-                <div className="ob-reco-meta">
-                  <span className="ob-badge">Moderate Risk</span>
-                  <span className="ob-reco-return">Expected return: <strong>8.4–11.2% / yr</strong></span>
-                </div>
-                <DonutChart />
-              </div>
-
-              <button className="ob-btn-primary" onClick={() => navigate('/dashboard')}>
-                Start investing with $5,000
+              <button className="btn-get-started" onClick={next}>
+                Get started <ArrowRight/>
               </button>
-              <div className="ob-adjust-link">Adjust allocation</div>
-            </>
+            </div>
+          )}
+
+          {/* ── Step 1: Profile ── */}
+          {step === 1 && (
+            <div className="onboard-body">
+              <div className="step-tag">Step 1 of {STEPS.length - 1}</div>
+              <div className="step-heading">Let's get to know you</div>
+              <div className="step-sub">We'll use this to personalize your experience and keep your account secure.</div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <div className="field-label">First name</div>
+                  <input className="field-input" type="text" placeholder="Shawn" value={firstName} onChange={e => setFirstName(e.target.value)}/>
+                </div>
+                <div>
+                  <div className="field-label">Last name</div>
+                  <input className="field-input" type="text" placeholder="Ji" value={lastName} onChange={e => setLastName(e.target.value)}/>
+                </div>
+              </div>
+              <div className="field-label">Email address</div>
+              <input className="field-input" type="email" placeholder="shawn@example.com" value={email} onChange={e => setEmail(e.target.value)}/>
+              <div className="field-label">Phone number (optional)</div>
+              <input className="field-input" type="tel" placeholder="+1 (555) 000-0000"/>
+            </div>
+          )}
+
+          {/* ── Step 2: Goal ── */}
+          {step === 2 && (
+            <div className="onboard-body">
+              <div className="step-tag">Step 2 of {STEPS.length - 1}</div>
+              <div className="step-heading">What's your primary goal?</div>
+              <div className="step-sub">We'll match you with strategies built around what matters most to you.</div>
+              <div className="options-grid">
+                {GOALS.map(g => (
+                  <div key={g.id} className={`option-card${goal === g.id ? ' selected' : ''}`} onClick={() => setGoal(g.id)}>
+                    <div className="option-icon">{g.icon}</div>
+                    <div className="option-label">{g.label}</div>
+                    <div className="option-sub">{g.sub}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── Step 3: Time horizon ── */}
+          {step === 3 && (
+            <div className="onboard-body">
+              <div className="step-tag">Step 3 of {STEPS.length - 1}</div>
+              <div className="step-heading">What's your time horizon?</div>
+              <div className="step-sub">Longer horizons allow for more aggressive strategies with higher growth potential.</div>
+              <div className="options-list">
+                {HORIZONS.map(h => (
+                  <div key={h.id} className={`option-row${horizon === h.id ? ' selected' : ''}`} onClick={() => setHorizon(h.id)}>
+                    <div className="opt-radio"><div className="opt-radio-dot"/></div>
+                    <div>
+                      <div className="option-label">{h.label}</div>
+                      <div className="option-sub">{h.sub}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── Step 4: Risk tolerance ── */}
+          {step === 4 && (
+            <div className="onboard-body">
+              <div className="step-tag">Step 4 of {STEPS.length - 1}</div>
+              <div className="step-heading">What's your risk tolerance?</div>
+              <div className="step-sub">Higher risk means more short-term volatility, but greater long-term growth potential.</div>
+              <div className="options-list">
+                {RISK_OPTIONS.map(r => (
+                  <div key={r.id} className={`option-row${risk === r.id ? ' selected' : ''}`} onClick={() => setRisk(r.id)}>
+                    <div className="opt-radio"><div className="opt-radio-dot"/></div>
+                    <div style={{ flex: 1 }}>
+                      <div className="option-label">{r.label}</div>
+                      <div className="option-sub">{r.sub}</div>
+                    </div>
+                    <div className="option-exp">{r.exp}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── Step 5: Recommendation ── */}
+          {step === 5 && (
+            <div className="result-body">
+              <div className="step-tag">Your personalized portfolio</div>
+              <div className="result-grid">
+                <div className="result-chart-wrap">
+                  <Donut slices={PORTFOLIO_SLICES}/>
+                </div>
+                <div>
+                  <div className="result-match">
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><circle cx="5" cy="5" r="5"/></svg>
+                    96% match
+                  </div>
+                  <div className="result-heading">Moderate Growth Portfolio</div>
+                  <div className="result-sub">A diversified, data-driven portfolio optimized for your goals — with automated rebalancing and tax efficiency.</div>
+                </div>
+              </div>
+
+              <div className="result-metrics">
+                <div className="result-metric">
+                  <div className="result-metric-label">Expected return</div>
+                  <div className="result-metric-val pos">+11–14%</div>
+                </div>
+                <div className="result-metric">
+                  <div className="result-metric-label">Volatility</div>
+                  <div className="result-metric-val">Medium</div>
+                </div>
+                <div className="result-metric">
+                  <div className="result-metric-label">Strategies</div>
+                  <div className="result-metric-val">3 active</div>
+                </div>
+              </div>
+
+              <div className="legend-list" style={{ marginBottom: 28 }}>
+                {PORTFOLIO_SLICES.map(s => (
+                  <div className="legend-row" key={s.label}>
+                    <div className="legend-dot" style={{ background: s.color }}/>
+                    {s.label}
+                    <div className="legend-pct">{s.pct}%</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Footer */}
+          {step > 0 && (
+            <div className="onboard-footer">
+              <button className="btn-back" onClick={back}><ArrowLeft/> Back</button>
+              <button className="btn-next" onClick={next} disabled={!canNext()}>
+                {step === STEPS.length - 1 ? 'Launch my portfolio' : 'Continue'}
+                <ArrowRight/>
+              </button>
+            </div>
           )}
         </div>
       </div>
